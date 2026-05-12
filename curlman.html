@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CURLman — API Tester</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0d0f12;
+    --s1:       #13161b;
+    --s2:       #1a1e26;
+    --s3:       #222733;
+    --border:   #2a2f3d;
+    --border2:  #353c50;
+    --accent:   #4fffb0;
+    --blue:     #00cfff;
+    --red:      #ff6b6b;
+    --orange:   #ffb347;
+    --purple:   #c084fc;
+    --pink:     #fb7185;
+    --slate:    #94a3b8;
+    --text:     #e8ecf4;
+    --text2:    #8892a4;
+    --text3:    #5a6378;
+    --r:        6px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:13px}
+
+  /* ─── TOP BAR ─────────────────────────────── */
+  .topbar{display:flex;align-items:stretch;height:46px;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0;overflow:hidden}
+  .logo{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--accent);padding:0 16px;display:flex;align-items:center;border-right:1px solid var(--border);flex-shrink:0;white-space:nowrap;letter-spacing:-.3px}
+  .logo span{color:var(--text2);font-weight:400}
+
+  /* Request tab strip */
+  .rtab-strip{display:flex;align-items:stretch;flex:1;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+  .rtab-strip::-webkit-scrollbar{display:none}
+  .rtab{display:flex;align-items:center;gap:7px;padding:0 12px;min-width:140px;max-width:210px;cursor:pointer;border-right:1px solid var(--border);color:var(--text2);font-size:11px;white-space:nowrap;overflow:hidden;user-select:none;flex-shrink:0;transition:background .12s,color .12s;position:relative}
+  .rtab:hover{background:var(--s2);color:var(--text)}
+  .rtab.active{background:var(--bg);color:var(--text);box-shadow:inset 0 -2px 0 var(--accent)}
+  .rtab-method{font-size:9px;font-weight:700;letter-spacing:.5px;padding:2px 5px;border-radius:3px;background:var(--s3);flex-shrink:0}
+  .rtab-name{flex:1;overflow:hidden;text-overflow:ellipsis;outline:none}
+  .rtab-name[contenteditable=true]{background:var(--s3);border-radius:3px;padding:0 3px;min-width:20px}
+  .rtab-close{background:transparent;border:none;color:var(--text3);font-size:13px;cursor:pointer;padding:0 2px;border-radius:3px;line-height:1;opacity:0;transition:opacity .12s,color .12s;flex-shrink:0}
+  .rtab:hover .rtab-close,.rtab.active .rtab-close{opacity:1}
+  .rtab-close:hover{color:var(--red)}
+  .new-rtab-btn{background:transparent;border:none;color:var(--text2);font-size:20px;line-height:46px;padding:0 14px;cursor:pointer;flex-shrink:0;transition:color .15s}
+  .new-rtab-btn:hover{color:var(--accent)}
+
+  /* ─── URL BAR ─────────────────────────────── */
+  .urlbar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0}
+  .method-sel{background:var(--s3);border:1px solid var(--border2);font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:0 10px;height:36px;border-radius:var(--r);cursor:pointer;outline:none;min-width:105px}
+  .method-sel option{background:var(--s2);color:var(--text)}
+  .method-sel[data-m=GET]    {color:var(--accent)}
+  .method-sel[data-m=POST]   {color:var(--orange)}
+  .method-sel[data-m=PUT]    {color:var(--blue)}
+  .method-sel[data-m=DELETE] {color:var(--red)}
+  .method-sel[data-m=PATCH]  {color:var(--purple)}
+  .method-sel[data-m=HEAD]   {color:var(--pink)}
+  .method-sel[data-m=OPTIONS]{color:var(--slate)}
+  .url-inp{flex:1;background:var(--s3);border:1px solid var(--border2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;padding:0 14px;height:36px;border-radius:var(--r);outline:none;transition:border-color .2s}
+  .url-inp:focus{border-color:var(--accent)}
+  .url-inp::placeholder{color:var(--text3)}
+  .send-btn{background:var(--accent);color:#000;border:none;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;padding:0 22px;height:36px;border-radius:var(--r);cursor:pointer;transition:opacity .15s,transform .1s;white-space:nowrap;letter-spacing:.3px}
+  .send-btn:hover{opacity:.85}
+  .send-btn:active{transform:scale(.97)}
+  .send-btn:disabled{opacity:.4;cursor:not-allowed}
+
+  /* ─── MAIN SPLIT ──────────────────────────── */
+  .main{display:flex;flex:1;overflow:hidden}
+  .left-pane{width:52%;display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden}
+  .resizer{width:4px;background:var(--border);cursor:col-resize;flex-shrink:0;transition:background .15s}
+  .resizer:hover,.resizer.drag{background:var(--accent)}
+  .right-pane{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+  /* ─── SECTION TABS (params/auth/headers/body) */
+  .sec-tabs{display:flex;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
+  .sec-tab{padding:10px 18px;cursor:pointer;color:var(--text2);font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s}
+  .sec-tab:hover{color:var(--text)}
+  .sec-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .badge{background:var(--accent);color:#000;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:5px;vertical-align:middle}
+  .sec-content{display:none;flex:1;overflow:hidden;flex-direction:column}
+  .sec-content.active{display:flex}
+
+  /* ─── KV TABLE ───────────────────────────── */
+  .kv-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column}
+  .kv-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--s1);flex-shrink:0}
+  .kv-label{color:var(--text2);font-size:11px;letter-spacing:.5px}
+  .add-btn{background:transparent;border:1px solid var(--border2);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 10px;border-radius:var(--r);cursor:pointer;transition:background .15s}
+  .add-btn:hover{background:var(--s3)}
+  .kv-scroll{overflow-y:auto;flex:1}
+  .kv-tbl{width:100%;border-collapse:collapse}
+  .kv-tbl th{background:var(--s2);color:var(--text3);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1}
+  .kv-tbl td{padding:3px 4px;border-bottom:1px solid var(--border);vertical-align:middle}
+  .kv-tbl tr:hover td{background:var(--s2)}
+  .kv-inp{width:100%;background:transparent;border:1px solid transparent;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:5px 8px;border-radius:4px;outline:none;transition:border-color .15s}
+  .kv-inp:focus{border-color:var(--border2);background:var(--s3)}
+  .kv-inp::placeholder{color:var(--text3)}
+  .kv-inp.key{color:var(--blue)}
+  .kv-chk{accent-color:var(--accent);cursor:pointer;width:14px;height:14px}
+  .del-btn{background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;transition:color .15s}
+  .del-btn:hover{color:var(--red)}
+
+  /* ─── AUTH ───────────────────────────────── */
+  .auth-wrap{padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px}
+  .auth-sel{background:var(--s3);border:1px solid var(--border2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 12px;border-radius:var(--r);outline:none;cursor:pointer;width:220px}
+  .auth-fields{display:flex;flex-direction:column;gap:10px}
+  .auth-field label{display:block;color:var(--text3);font-size:10px;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px}
+  .auth-field input{width:100%;background:var(--s3);border:1px solid var(--border2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 12px;border-radius:var(--r);outline:none;transition:border-color .15s}
+  .auth-field input:focus{border-color:var(--accent)}
+
+  /* ─── BODY TAB ───────────────────────────── */
+  .body-bar{display:flex;gap:6px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--s1);flex-shrink:0;flex-wrap:wrap}
+  .btype-btn{background:var(--s3);border:1px solid var(--border2);color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer;transition:all .15s}
+  .btype-btn:hover{color:var(--text);border-color:var(--text3)}
+  .btype-btn.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+  .body-panel{display:none;flex:1;overflow:hidden;flex-direction:column}
+  .body-panel.active{display:flex}
+  .code-ta{flex:1;background:var(--s2);border:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:14px;resize:none;outline:none;line-height:1.7;tab-size:2}
+  .code-ta::placeholder{color:var(--text3)}
+
+  /* JSON toolbar */
+  .json-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0}
+  .json-bar-hint{color:var(--text3);font-size:10px;letter-spacing:.8px}
+  .json-status{font-size:10px;padding:2px 8px;border-radius:10px}
+  .json-status.valid{color:var(--accent);background:rgba(79,255,176,.1)}
+  .json-status.invalid{color:var(--red);background:rgba(255,107,107,.1)}
+  .beauty-btn{background:var(--s3);border:1px solid var(--border2);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:4px 12px;border-radius:var(--r);cursor:pointer;transition:all .15s}
+  .beauty-btn:hover{background:var(--accent);color:#000;border-color:var(--accent)}
+  .beauty-btn:active{transform:scale(.96)}
+  .minify-btn{color:var(--text2)}
+  .minify-btn:hover{background:var(--s2);color:var(--text);border-color:var(--text3)}
+
+  /* multipart */
+  .mp-type-sel{background:var(--s2);border:1px solid var(--border);color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 8px;border-radius:4px;cursor:pointer;outline:none}
+  .file-inp{color:var(--text2);font-size:11px}
+  .file-inp::file-selector-button{background:var(--s3);border:1px solid var(--border2);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;cursor:pointer;margin-right:6px}
+
+  /* ─── CURL PREVIEW ───────────────────────── */
+  .curl-wrap{border-top:1px solid var(--border);background:var(--s1);flex-shrink:0}
+  .curl-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;cursor:pointer;user-select:none}
+  .curl-hdr span{color:var(--text3);font-size:10px;letter-spacing:1px;text-transform:uppercase}
+  .copy-curl-btn{background:transparent;border:1px solid var(--border2);color:var(--blue);font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 10px;border-radius:var(--r);cursor:pointer;transition:background .15s}
+  .copy-curl-btn:hover{background:var(--s3)}
+  .curl-code{background:var(--bg);color:var(--accent);font-size:11px;padding:10px 14px;max-height:120px;overflow-y:auto;line-height:1.6;white-space:pre-wrap;word-break:break-all;border-top:1px solid var(--border)}
+
+  /* ─── RESPONSE ───────────────────────────── */
+  .resp-topbar{display:flex;align-items:center;gap:12px;padding:0 14px;height:42px;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0}
+  .resp-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.5px;text-transform:uppercase}
+  .status-badge{font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;display:none}
+  .status-badge.ok  {background:rgba(79,255,176,.15);color:var(--accent);display:inline}
+  .status-badge.err {background:rgba(255,107,107,.15);color:var(--red);display:inline}
+  .status-badge.warn{background:rgba(255,179,71,.15);color:var(--orange);display:inline}
+  .meta-pill{font-size:11px;color:var(--text3);background:var(--s3);padding:2px 8px;border-radius:10px}
+  .resp-tabs{display:flex;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0}
+  .resp-tab{padding:8px 16px;cursor:pointer;color:var(--text2);font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;border-bottom:2px solid transparent;transition:color .15s}
+  .resp-tab:hover{color:var(--text)}
+  .resp-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+  .resp-panel{display:none;flex:1;overflow:hidden;flex-direction:column}
+  .resp-panel.active{display:flex}
+  .resp-scroll{flex:1;overflow:auto}
+  .resp-pre{padding:14px;font-size:12.5px;line-height:1.8;color:var(--text);white-space:pre-wrap;word-break:break-all;min-height:100%}
+  .json-k{color:#7dd3fc}.json-s{color:#86efac}.json-n{color:#fbbf24}.json-b{color:#f472b6}.json-null{color:#94a3b8}
+  .hdrs-tbl{width:100%;border-collapse:collapse}
+  .hdrs-tbl th{background:var(--s2);color:var(--text3);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:8px 14px;text-align:left;border-bottom:1px solid var(--border);position:sticky;top:0}
+  .hdrs-tbl td{padding:7px 14px;border-bottom:1px solid var(--border);font-size:12px;word-break:break-all}
+  .hdrs-tbl td:first-child{color:var(--blue)}
+  .hdrs-tbl td:last-child{color:var(--text2)}
+  .hdrs-tbl tr:hover td{background:var(--s2)}
+  .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text3)}
+  .empty-state .icon{font-size:48px;opacity:.3}
+  .empty-state p{font-size:12px}
+  .spinner{width:28px;height:28px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ─── SCROLLBAR ──────────────────────────── */
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+  /* ─── TOAST ──────────────────────────────── */
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--s3);border:1px solid var(--border2);color:var(--accent);font-size:12px;padding:10px 18px;border-radius:10px;opacity:0;transform:translateY(10px);transition:all .2s;pointer-events:none;z-index:999}
+  .toast.show{opacity:1;transform:translateY(0)}
+
+  /* ─── PROXY UI ───────────────────────────── */
+  .proxy-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--s3); border: 1px solid var(--border2);
+    color: var(--text2); font-size: 11px; font-weight: 600;
+    padding: 0 12px; height: 36px; border-radius: var(--r);
+    cursor: pointer; white-space: nowrap; user-select: none;
+    transition: border-color .15s, color .15s;
+    letter-spacing: .3px;
+  }
+  .proxy-pill:hover { border-color: var(--text3); color: var(--text); }
+  .proxy-pill.active { border-color: var(--accent); color: var(--accent); }
+  .proxy-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text3); flex-shrink: 0;
+    transition: background .2s;
+  }
+  .proxy-dot.on  { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .proxy-dot.err { background: var(--red);    box-shadow: 0 0 6px var(--red); }
+
+  .proxy-panel {
+    background: var(--s1); border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .proxy-panel-inner {
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 12px 14px;
+  }
+  .proxy-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .proxy-toggle-label {
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer; color: var(--text); font-size: 12px; user-select: none;
+  }
+  .proxy-toggle-label input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+  .proxy-check-btn {
+    background: transparent; border: 1px solid var(--border2);
+    color: var(--blue); font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; padding: 4px 12px; border-radius: var(--r);
+    cursor: pointer; transition: background .15s;
+  }
+  .proxy-check-btn:hover { background: var(--s3); }
+  .proxy-url-row { display: flex; align-items: center; gap: 10px; }
+  .proxy-url-label { color: var(--text3); font-size: 11px; white-space: nowrap; }
+  .proxy-url-inp {
+    background: var(--s3); border: 1px solid var(--border2);
+    color: var(--text); font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; padding: 5px 10px; border-radius: var(--r);
+    outline: none; width: 240px; transition: border-color .15s;
+  }
+  .proxy-url-inp:focus { border-color: var(--accent); }
+  .proxy-hint { color: var(--text3); font-size: 11px; }
+  .proxy-hint code { color: var(--accent); background: var(--s3); padding: 1px 6px; border-radius: 4px; }
+  .proxy-status-msg { font-size: 11px; min-height: 16px; }
+  .proxy-status-msg.ok  { color: var(--accent); }
+  .proxy-status-msg.err { color: var(--red); }
+
+  select option{background:#1a1e26}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR: logo + request tabs -->
+<div class="topbar">
+  <div class="logo">CURL<span>man</span></div>
+  <div class="rtab-strip" id="rtabStrip"></div>
+  <button class="new-rtab-btn" onclick="createTab()" title="New tab (Ctrl+T)">＋</button>
+</div>
+
+<!-- URL BAR -->
+<div class="urlbar">
+  <select class="method-sel" id="methodSel" data-m="GET" onchange="onMethodChange()">
+    <option>GET</option><option>POST</option><option>PUT</option>
+    <option>DELETE</option><option>PATCH</option><option>HEAD</option><option>OPTIONS</option>
+  </select>
+  <input class="url-inp" id="urlInp" type="text" placeholder="https://api.example.com/endpoint"
+         spellcheck="false" autocomplete="off" oninput="updateCurl()"/>
+  <div class="proxy-pill" id="proxyPill" onclick="toggleProxyPanel()" title="Proxy settings">
+    <span class="proxy-dot" id="proxyDot"></span>
+    <span id="proxyLabel">Direct</span>
+  </div>
+  <button class="send-btn" id="sendBtn" onclick="sendRequest()">&#9654; SEND</button>
+</div>
+
+<!-- PROXY SETTINGS PANEL -->
+<div class="proxy-panel" id="proxyPanel" style="display:none">
+  <div class="proxy-panel-inner">
+    <div class="proxy-row">
+      <label class="proxy-toggle-label">
+        <input type="checkbox" id="proxyEnabled" onchange="onProxyToggle()">
+        <span>Route through proxy server</span>
+      </label>
+      <button class="proxy-check-btn" onclick="checkProxy()">Check connection</button>
+    </div>
+    <div class="proxy-url-row">
+      <span class="proxy-url-label">Proxy URL</span>
+      <input class="proxy-url-inp" id="proxyUrl" value="http://127.0.0.1:7474"
+             oninput="onProxyUrlChange()" spellcheck="false"/>
+    </div>
+    <!--<div class="proxy-hint">
+      Start the proxy: &nbsp;<code>python proxy.py</code>&nbsp; then enable the toggle above.
+    </div>-->
+    <div class="proxy-status-msg" id="proxyStatusMsg"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT PANE -->
+  <div class="left-pane" id="leftPane">
+
+    <!-- Section tabs -->
+    <div class="sec-tabs">
+      <div class="sec-tab active" data-sec="params"  onclick="switchSec(this,'params')">Params <span class="badge" id="paramsBadge" style="display:none">0</span></div>
+      <div class="sec-tab"        data-sec="auth"    onclick="switchSec(this,'auth')">Auth</div>
+      <div class="sec-tab"        data-sec="headers" onclick="switchSec(this,'headers')">Headers <span class="badge" id="headersBadge" style="display:none">0</span></div>
+      <div class="sec-tab"        data-sec="body"    onclick="switchSec(this,'body')">Body</div>
+    </div>
+
+    <!-- PARAMS -->
+    <div class="sec-content active" id="sec-params">
+      <div class="kv-wrap">
+        <div class="kv-bar"><span class="kv-label">Query Parameters</span><button class="add-btn" onclick="addKV('paramsT')">+ Add Param</button></div>
+        <div class="kv-scroll"><table class="kv-tbl" id="paramsT">
+          <thead><tr><th style="width:24px"></th><th>Key</th><th>Value</th><th>Description</th><th style="width:30px"></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- AUTH -->
+    <div class="sec-content" id="sec-auth">
+      <div class="auth-wrap">
+        <div>
+          <div style="color:var(--text3);font-size:10px;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px">Auth Type</div>
+          <select class="auth-sel" id="authType" onchange="renderAuth()">
+            <option value="none">No Auth</option>
+            <option value="bearer">Bearer Token</option>
+            <option value="basic">Basic Auth</option>
+            <option value="apikey">API Key</option>
+            <option value="custom">Custom Header</option>
+          </select>
+        </div>
+        <div class="auth-fields" id="authFields"></div>
+      </div>
+    </div>
+
+    <!-- HEADERS -->
+    <div class="sec-content" id="sec-headers">
+      <div class="kv-wrap">
+        <div class="kv-bar"><span class="kv-label">Request Headers</span><button class="add-btn" onclick="addKV('headersT')">+ Add Header</button></div>
+        <div class="kv-scroll"><table class="kv-tbl" id="headersT">
+          <thead><tr><th style="width:24px"></th><th>Header Name</th><th>Value</th><th>Description</th><th style="width:30px"></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="sec-content" id="sec-body">
+      <div class="body-bar">
+        <button class="btype-btn active" data-b="none"      onclick="switchBody(this)">none</button>
+        <button class="btype-btn"        data-b="json"      onclick="switchBody(this)">JSON</button>
+        <button class="btype-btn"        data-b="form"      onclick="switchBody(this)">form-urlencoded</button>
+        <button class="btype-btn"        data-b="multipart" onclick="switchBody(this)">multipart/form-data</button>
+        <button class="btype-btn"        data-b="text"      onclick="switchBody(this)">text</button>
+        <button class="btype-btn"        data-b="xml"       onclick="switchBody(this)">XML</button>
+        <button class="btype-btn"        data-b="raw"       onclick="switchBody(this)">raw binary</button>
+      </div>
+
+      <div class="body-panel active" id="bp-none">
+        <div class="empty-state"><span class="icon">∅</span><p>No body for this request.</p></div>
+      </div>
+
+      <div class="body-panel" id="bp-json">
+        <div class="json-bar">
+          <span class="json-bar-hint">application/json</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span class="json-status" id="jsonStatus"></span>
+            <button class="beauty-btn" onclick="beautifyJSON()" title="Ctrl+Shift+F">✦ Beautify</button>
+            <button class="beauty-btn minify-btn" onclick="minifyJSON()">⊟ Minify</button>
+          </div>
+        </div>
+        <textarea class="code-ta" id="jsonBody" placeholder='{&#10;  "key": "value"&#10;}' spellcheck="false" oninput="validateJSON();updateCurl()"></textarea>
+      </div>
+
+      <div class="body-panel" id="bp-form">
+        <div class="kv-wrap" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+          <div class="kv-bar"><span class="kv-label">Form Fields</span><button class="add-btn" onclick="addKV('formT')">+ Add Field</button></div>
+          <div class="kv-scroll"><table class="kv-tbl" id="formT">
+            <thead><tr><th style="width:24px"></th><th>Key</th><th>Value</th><th>Description</th><th style="width:30px"></th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <div class="body-panel" id="bp-multipart">
+        <div class="kv-wrap" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+          <div class="kv-bar"><span class="kv-label">Multipart Fields</span><button class="add-btn" onclick="addMP()">+ Add Part</button></div>
+          <div class="kv-scroll"><table class="kv-tbl" id="mpT">
+            <thead><tr><th style="width:24px"></th><th>Key</th><th>Type</th><th>Value / File</th><th style="width:30px"></th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <div class="body-panel" id="bp-text">
+        <textarea class="code-ta" id="textBody" placeholder="Plain text body..." spellcheck="false" oninput="updateCurl()"></textarea>
+      </div>
+
+      <div class="body-panel" id="bp-xml">
+        <textarea class="code-ta" id="xmlBody" placeholder="<root>&#10;  <item>value</item>&#10;</root>" spellcheck="false" oninput="updateCurl()"></textarea>
+      </div>
+
+      <div class="body-panel" id="bp-raw">
+        <div style="padding:16px;display:flex;flex-direction:column;gap:10px;flex:1">
+          <div style="color:var(--text3);font-size:11px">Select a binary file to send as raw body:</div>
+          <input type="file" id="rawFile" class="file-inp" onchange="onRawChange()"/>
+          <div style="color:var(--text3);font-size:10px" id="rawInfo"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CURL PREVIEW -->
+    <div class="curl-wrap">
+      <div class="curl-hdr" onclick="toggleCurl()">
+        <span>⚡ curl preview</span>
+        <button class="copy-curl-btn" onclick="event.stopPropagation();copyCurl()">Copy</button>
+      </div>
+      <div id="curlBody">
+        <div class="curl-code" id="curlCode">curl -X GET "https://api.example.com/endpoint"</div>
+      </div>
+    </div>
+
+  </div><!-- /left-pane -->
+
+  <div class="resizer" id="resizer"></div>
+
+  <!-- RIGHT PANE -->
+  <div class="right-pane">
+    <div class="resp-topbar">
+      <span class="resp-title">Response</span>
+      <span class="status-badge" id="statusBadge"></span>
+      <span class="meta-pill" id="timePill" style="display:none"></span>
+      <span class="meta-pill" id="sizePill" style="display:none"></span>
+    </div>
+    <div class="resp-tabs">
+      <div class="resp-tab active" data-rt="body"    onclick="switchResp(this,'body')">Body</div>
+      <div class="resp-tab"        data-rt="headers" onclick="switchResp(this,'headers')">Headers</div>
+      <div class="resp-tab"        data-rt="raw"     onclick="switchResp(this,'raw')">Raw</div>
+    </div>
+    <div class="resp-panel active" id="rp-body">
+      <div id="emptyState" class="empty-state"><div class="icon">◎</div><p>Send a request to see the response.</p></div>
+      <div id="loadingState" class="empty-state" style="display:none"><div class="spinner"></div><p>Sending…</p></div>
+      <div class="resp-scroll" id="respBodyWrap" style="display:none"><pre class="resp-pre" id="respPre"></pre></div>
+    </div>
+    <div class="resp-panel" id="rp-headers">
+      <div class="resp-scroll">
+        <table class="hdrs-tbl" id="respHdrsTbl">
+          <thead><tr><th>Header</th><th>Value</th></tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="resp-panel" id="rp-raw">
+      <div class="resp-scroll"><pre class="resp-pre" id="respRaw" style="color:var(--text2)"></pre></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  GLOBAL STATE
+// ═══════════════════════════════════════════════════════════════════
+let tabs        = [];
+let activeId    = null;
+let tabCounter  = 0;
+let bodyType    = 'none';
+let curlOpen    = true;
+
+const MC = { GET:'var(--accent)', POST:'var(--orange)', PUT:'var(--blue)', DELETE:'var(--red)', PATCH:'var(--purple)', HEAD:'var(--pink)', OPTIONS:'var(--slate)' };
+
+// ═══════════════════════════════════════════════════════════════════
+//  DEFAULT TAB STATE
+// ═══════════════════════════════════════════════════════════════════
+function newTabState() {
+  return {
+    id:         ++tabCounter,
+    name:       `Request ${tabCounter}`,
+    method:     'GET',
+    url:        '',
+    sec:        'params',    // active section tab
+    bodyType:   'none',
+    jsonBody:   '',
+    textBody:   '',
+    xmlBody:    '',
+    params:     [],          // [{enabled,key,value,desc}]
+    headers:    [],
+    formRows:   [],
+    mpRows:     [],          // [{enabled,key,type,value}]
+    authType:   'none',
+    authValues: {},
+    response:   null,        // saved response
+    respSec:    'body',
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SAVE active tab DOM → state object
+// ═══════════════════════════════════════════════════════════════════
+function saveActive() {
+  if (!activeId) return;
+  const t = tabs.find(x => x.id === activeId);
+  if (!t) return;
+
+  // sync name from DOM span in case rename blur hasn't fired
+  const nEl = document.getElementById(`rn-${activeId}`);
+  if (nEl && nEl.contentEditable !== 'true') {
+    const domName = nEl.textContent.trim();
+    if (domName) t.name = domName;
+  }
+
+  t.method   = document.getElementById('methodSel').value;
+  t.url      = document.getElementById('urlInp').value;
+  t.sec      = document.querySelector('.sec-tab.active')?.dataset.sec || 'params';
+  t.bodyType = bodyType;
+  t.jsonBody = document.getElementById('jsonBody').value;
+  t.textBody = document.getElementById('textBody').value;
+  t.xmlBody  = document.getElementById('xmlBody').value;
+  t.params   = readKVTbl('paramsT');
+  t.headers  = readKVTbl('headersT');
+  t.formRows = readKVTbl('formT');
+  t.mpRows   = readMpTbl();
+  t.authType = document.getElementById('authType').value;
+  t.authValues = {};
+  ['authToken','authUser','authPass','apikeyName','apikeyVal','customHeader','customValue'].forEach(id => {
+    const el = document.getElementById(id); if (el) t.authValues[id] = el.value;
+  });
+  t.respSec = document.querySelector('.resp-tab.active')?.dataset.rt || 'body';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RESTORE state object → DOM
+// ═══════════════════════════════════════════════════════════════════
+function restoreTab(t) {
+  // method + url
+  const ms = document.getElementById('methodSel');
+  ms.value = t.method; ms.setAttribute('data-m', t.method);
+  document.getElementById('urlInp').value = t.url;
+
+  // body type
+  bodyType = t.bodyType || 'none';
+  document.querySelectorAll('.btype-btn').forEach(b => b.classList.toggle('active', b.dataset.b === bodyType));
+  document.querySelectorAll('.body-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('bp-' + bodyType)?.classList.add('active');
+
+  // body content
+  document.getElementById('jsonBody').value = t.jsonBody || '';
+  document.getElementById('textBody').value = t.textBody || '';
+  document.getElementById('xmlBody').value  = t.xmlBody  || '';
+  setJSONStatus('', '');
+  if (t.jsonBody) validateJSON();
+
+  // kv tables
+  fillKVTbl('paramsT',  t.params   || []);
+  fillKVTbl('headersT', t.headers  || []);
+  fillKVTbl('formT',    t.formRows || []);
+  fillMpTbl(t.mpRows || []);
+
+  // auth — set type first, render fields, then populate values
+  document.getElementById('authType').value = t.authType || 'none';
+  renderAuth();   // renders the input fields into the DOM
+  Object.entries(t.authValues || {}).forEach(([id, v]) => {
+    const el = document.getElementById(id); if (el) el.value = v;
+  });
+
+  // section tabs
+  const sec = t.sec || 'params';
+  document.querySelectorAll('.sec-tab').forEach(x => x.classList.toggle('active', x.dataset.sec === sec));
+  document.querySelectorAll('.sec-content').forEach(x => x.classList.toggle('active', x.id === 'sec-' + sec));
+
+  // response tabs
+  const rs = t.respSec || 'body';
+  document.querySelectorAll('.resp-tab').forEach(x => x.classList.toggle('active', x.dataset.rt === rs));
+  document.querySelectorAll('.resp-panel').forEach(x => x.classList.toggle('active', x.id === 'rp-' + rs));
+
+  // response content
+  if (t.response) showResponse(t.response); else clearResponse();
+
+  updateBadges();
+  // call the original updateCurl directly — not the wrapped version —
+  // because _restoring is true here and the wrapper already guards, but
+  // we still need the curl preview to reflect the restored tab
+  _origUpdateCurl ? _origUpdateCurl() : updateCurl();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  KV TABLE READ / WRITE HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function readKVTbl(tid) {
+  const rows = [];
+  document.querySelectorAll(`#${tid} tbody tr`).forEach(tr => {
+    const inp = tr.querySelectorAll('input');
+    if (inp.length < 3) return;
+    rows.push({ enabled: inp[0].checked, key: inp[1].value, value: inp[2].value, desc: inp[3]?.value || '' });
+  });
+  return rows;
+}
+
+function readMpTbl() {
+  const rows = [];
+  document.querySelectorAll('#mpT tbody tr').forEach(tr => {
+    const chk = tr.querySelector('.kv-chk');
+    const sel = tr.querySelector('select');
+    const inp = tr.querySelectorAll('input');
+    let key = '', type = 'text', value = '';
+    inp.forEach(i => {
+      if (i.type === 'checkbox') return;
+      if (!key) { key = i.value; return; }
+      if (i.type !== 'file') value = i.value;
+    });
+    if (sel) type = sel.value;
+    rows.push({ enabled: chk?.checked ?? true, key, type, value });
+  });
+  return rows;
+}
+
+function fillKVTbl(tid, rows) {
+  document.querySelector(`#${tid} tbody`).innerHTML = '';
+  if (!rows.length) { addKV(tid); return; }
+  rows.forEach(r => addKV(tid, r.key, r.value, r.desc, r.enabled));
+}
+
+function fillMpTbl(rows) {
+  document.querySelector('#mpT tbody').innerHTML = '';
+  if (!rows.length) { addMP(); return; }
+  rows.forEach(r => addMP(r.key, r.type, r.value, r.enabled));
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  REQUEST TAB MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════
+function createTab() {
+  const t = newTabState();
+  tabs.push(t);
+  const el = rebuildTabEl(t);
+  switchToTab(t.id);
+  el.scrollIntoView({ inline: 'end', behavior: 'smooth' });
+  persistState();
+}
+
+function switchToTab(id) {
+  if (activeId === id) return;
+  saveActive();          // snapshot departing tab into its state object
+  activeId = id;
+  document.querySelectorAll('.rtab').forEach(el => el.classList.toggle('active', +el.dataset.id === id));
+  _restoring = true;     // block persist calls while DOM is mid-swap
+  restoreTab(tabs.find(t => t.id === id));
+  _restoring = false;
+  persistState();        // one clean save after DOM is fully populated
+}
+
+function closeTab(e, id) {
+  e.stopPropagation();
+  if (tabs.length === 1) { toast('Need at least one tab'); return; }
+  const idx = tabs.findIndex(t => t.id === id);
+  tabs.splice(idx, 1);
+  document.querySelector(`.rtab[data-id="${id}"]`)?.remove();
+  if (activeId === id) {
+    activeId = null;
+    switchToTab(tabs[Math.min(idx, tabs.length - 1)].id);
+  }
+}
+
+function updateTabBadge() {
+  if (!activeId) return;
+  const t   = tabs.find(x => x.id === activeId);
+  const m   = document.getElementById('methodSel').value;
+  const bEl = document.getElementById(`rm-${activeId}`);
+  if (bEl) { bEl.textContent = m; bEl.style.color = MC[m] || 'var(--text2)'; }
+  const url   = document.getElementById('urlInp').value.trim();
+  const nEl   = document.getElementById(`rn-${activeId}`);
+  if (nEl && t && t.name.startsWith('Request ')) {
+    nEl.textContent = url ? shortURL(url) : t.name;
+  }
+}
+
+function shortURL(url) {
+  try { const u = new URL(url); return (u.pathname === '/' ? u.hostname : u.hostname + u.pathname).slice(0, 24); }
+  catch { return url.slice(0, 24); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SECTION / BODY / RESPONSE TAB SWITCHES
+// ═══════════════════════════════════════════════════════════════════
+function switchSec(el, name) {
+  document.querySelectorAll('.sec-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.sec-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('sec-' + name).classList.add('active');
+}
+
+function switchBody(el) {
+  document.querySelectorAll('.btype-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.body-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  bodyType = el.dataset.b;
+  document.getElementById('bp-' + bodyType).classList.add('active');
+  updateCurl();
+}
+
+function switchResp(el, name) {
+  document.querySelectorAll('.resp-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.resp-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('rp-' + name).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  KV ROW HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function addKV(tid, key='', value='', desc='', checked=true) {
+  const tbody = document.querySelector(`#${tid} tbody`);
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="checkbox" class="kv-chk" ${checked?'checked':''} onchange="updateCurl()"></td>
+    <td><input class="kv-inp key" placeholder="key" value="${esc(key)}" oninput="updateBadges();updateCurl()"></td>
+    <td><input class="kv-inp" placeholder="value" value="${esc(value)}" oninput="updateCurl()"></td>
+    <td><input class="kv-inp" style="color:var(--text3)" placeholder="description" value="${esc(desc)}"></td>
+    <td><button class="del-btn" onclick="this.closest('tr').remove();updateBadges();updateCurl()">✕</button></td>`;
+  tbody.appendChild(tr);
+  updateBadges(); updateCurl();
+}
+
+function addMP(key='', type='text', value='', checked=true) {
+  const tbody = document.querySelector('#mpT tbody');
+  const tr = document.createElement('tr');
+  const isFile = type === 'file';
+  tr.innerHTML = `
+    <td><input type="checkbox" class="kv-chk" ${checked?'checked':''} onchange="updateCurl()"></td>
+    <td><input class="kv-inp key" placeholder="key" value="${esc(key)}" oninput="updateCurl()"></td>
+    <td><select class="mp-type-sel" onchange="toggleMpType(this);updateCurl()">
+      <option value="text" ${!isFile?'selected':''}>text</option>
+      <option value="file" ${isFile?'selected':''}>file</option>
+    </select></td>
+    <td class="mp-val">${isFile
+      ? `<input type="file" class="file-inp" onchange="updateCurl()">`
+      : `<input class="kv-inp" placeholder="value" value="${esc(value)}" oninput="updateCurl()">`
+    }</td>
+    <td><button class="del-btn" onclick="this.closest('tr').remove();updateCurl()">✕</button></td>`;
+  tbody.appendChild(tr);
+  updateCurl();
+}
+
+function toggleMpType(sel) {
+  const cell = sel.closest('tr').querySelector('.mp-val');
+  cell.innerHTML = sel.value === 'file'
+    ? `<input type="file" class="file-inp" onchange="updateCurl()">`
+    : `<input class="kv-inp" placeholder="value" oninput="updateCurl()">`;
+}
+
+function getKVRows(tid) {
+  const rows = [];
+  document.querySelectorAll(`#${tid} tbody tr`).forEach(tr => {
+    const inp = tr.querySelectorAll('input');
+    if (inp.length < 3) return;
+    const key = inp[1].value.trim();
+    if (key) rows.push({ enabled: inp[0].checked, key, value: inp[2].value.trim() });
+  });
+  return rows;
+}
+
+function getMPRows() {
+  const rows = [];
+  document.querySelectorAll('#mpT tbody tr').forEach(tr => {
+    const chk = tr.querySelector('.kv-chk');
+    const sel = tr.querySelector('select');
+    const inp = tr.querySelectorAll('input');
+    let key='', type='text', value='', file=null;
+    inp.forEach(i => {
+      if (i.type==='checkbox') return;
+      if (!key) { key=i.value.trim(); return; }
+      if (i.type==='file') { file=i.files[0]||null; type='file'; }
+      else { value=i.value; type='text'; }
+    });
+    if (sel) type = sel.value;
+    if (key) rows.push({ enabled: chk?.checked??true, key, type, value, file });
+  });
+  return rows;
+}
+
+function updateBadges() {
+  const pc = getKVRows('paramsT').filter(r=>r.enabled).length;
+  const hc = getKVRows('headersT').filter(r=>r.enabled).length;
+  const pb = document.getElementById('paramsBadge');
+  const hb = document.getElementById('headersBadge');
+  pb.textContent=pc; pb.style.display=pc?'inline':'none';
+  hb.textContent=hc; hb.style.display=hc?'inline':'none';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════════════════
+function renderAuth() {
+  const type = document.getElementById('authType').value;
+  const cont = document.getElementById('authFields');
+  cont.innerHTML = '';
+  const cfg = {
+    bearer: [{id:'authToken',   label:'Token',       ph:'Bearer token…'}],
+    basic:  [{id:'authUser',    label:'Username',    ph:'username'},
+             {id:'authPass',    label:'Password',    ph:'password', tp:'password'}],
+    apikey: [{id:'apikeyName',  label:'Header Name', ph:'X-API-Key'},
+             {id:'apikeyVal',   label:'Key Value',   ph:'your-key-here'}],
+    custom: [{id:'customHeader',label:'Header Name', ph:'X-Custom-Header'},
+             {id:'customValue', label:'Header Value',ph:'value'}],
+  };
+  (cfg[type]||[]).forEach(f => {
+    const d = document.createElement('div');
+    d.className = 'auth-field';
+    d.innerHTML = `<label>${f.label}</label><input id="${f.id}" type="${f.tp||'text'}" placeholder="${f.ph}" oninput="updateCurl()">`;
+    cont.appendChild(d);
+  });
+  updateCurl();
+}
+
+function getAuthHdrs() {
+  const type = document.getElementById('authType').value;
+  const g = id => { const e=document.getElementById(id); return e?e.value:''; };
+  if (type==='bearer') return [['Authorization',`Bearer ${g('authToken')}`]];
+  if (type==='basic')  return [['Authorization',`Basic ${btoa(g('authUser')+':'+g('authPass'))}`]];
+  if (type==='apikey') return [[g('apikeyName')||'X-API-Key', g('apikeyVal')]];
+  if (type==='custom') return [[g('customHeader'), g('customValue')]];
+  return [];
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  URL + CURL
+// ═══════════════════════════════════════════════════════════════════
+function buildURL() {
+  let base = document.getElementById('urlInp').value.trim();
+  if (!base) return base;
+  const ps = getKVRows('paramsT').filter(r=>r.enabled&&r.key);
+  if (!ps.length) return base;
+  const sep = base.includes('?')?'&':'?';
+  return base + sep + ps.map(r=>`${encodeURIComponent(r.key)}=${encodeURIComponent(r.value)}`).join('&');
+}
+
+function buildCurl() {
+  const method = document.getElementById('methodSel').value;
+  const url    = buildURL() || 'https://api.example.com/endpoint';
+  const hdrs   = [
+    ...getKVRows('headersT').filter(r=>r.enabled&&r.key),
+    ...getAuthHdrs().filter(([k,v])=>k&&v).map(([k,v])=>({key:k,value:v}))
+  ];
+  let parts = [`curl -X ${method}`];
+  hdrs.forEach(h => parts.push(`  -H "${es(h.key)}: ${es(h.value)}"`));
+
+  if (bodyType==='json') {
+    const b=document.getElementById('jsonBody').value.trim();
+    parts.push(`  -H "Content-Type: application/json"`);
+    if (b) parts.push(`  -d '${b.replace(/'/g,"'\\''")}' `);
+  } else if (bodyType==='form') {
+    parts.push(`  -H "Content-Type: application/x-www-form-urlencoded"`);
+    getKVRows('formT').filter(r=>r.enabled&&r.key).forEach(r =>
+      parts.push(`  --data-urlencode "${es(r.key)}=${es(r.value)}"`)
+    );
+  } else if (bodyType==='multipart') {
+    getMPRows().filter(r=>r.enabled&&r.key).forEach(r => {
+      if (r.type==='file') parts.push(`  -F "${es(r.key)}=@${r.file?r.file.name:'file.bin'}"`);
+      else parts.push(`  -F "${es(r.key)}=${es(r.value)}"`);
+    });
+  } else if (bodyType==='text') {
+    const b=document.getElementById('textBody').value.trim();
+    parts.push(`  -H "Content-Type: text/plain"`);
+    if (b) parts.push(`  -d '${b.replace(/'/g,"'\\''")}' `);
+  } else if (bodyType==='xml') {
+    const b=document.getElementById('xmlBody').value.trim();
+    parts.push(`  -H "Content-Type: application/xml"`);
+    if (b) parts.push(`  --data '${b.replace(/'/g,"'\\''")}' `);
+  } else if (bodyType==='raw') {
+    const f=document.getElementById('rawFile').files[0];
+    if (f) parts.push(`  --data-binary "@${f.name}"`);
+  }
+  parts.push(`  "${url}"`);
+  return parts.join(' \\\n');
+}
+
+function updateCurl() {
+  document.getElementById('curlCode').textContent = buildCurl();
+  updateTabBadge();
+}
+function toggleCurl() {
+  curlOpen=!curlOpen;
+  document.getElementById('curlBody').style.display=curlOpen?'block':'none';
+}
+function copyCurl() {
+  navigator.clipboard.writeText(buildCurl()).then(()=>toast('curl command copied!'));
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  PROXY STATE
+// ═══════════════════════════════════════════════════════════════════
+let proxyEnabled = false;
+let proxyUrl     = 'http://127.0.0.1:7474';
+let proxyPanelOpen = false;
+
+function toggleProxyPanel() {
+  proxyPanelOpen = !proxyPanelOpen;
+  document.getElementById('proxyPanel').style.display = proxyPanelOpen ? 'block' : 'none';
+}
+
+function onProxyToggle() {
+  proxyEnabled = document.getElementById('proxyEnabled').checked;
+  updateProxyPill();
+  if (proxyEnabled) checkProxy();
+}
+
+function onProxyUrlChange() {
+  proxyUrl = document.getElementById('proxyUrl').value.trim();
+}
+
+function updateProxyPill() {
+  const pill  = document.getElementById('proxyPill');
+  const dot   = document.getElementById('proxyDot');
+  const label = document.getElementById('proxyLabel');
+  if (proxyEnabled) {
+    pill.classList.add('active');
+    dot.className  = 'proxy-dot on';
+    label.textContent = 'Proxy ON';
+  } else {
+    pill.classList.remove('active');
+    dot.className  = 'proxy-dot';
+    label.textContent = 'Direct';
+  }
+}
+
+function setProxyStatus(msg, type='') {
+  const el = document.getElementById('proxyStatusMsg');
+  el.textContent = msg;
+  el.className   = 'proxy-status-msg' + (type ? ' '+type : '');
+}
+
+async function checkProxy() {
+  setProxyStatus('Checking proxy connection…');
+  const base = (document.getElementById('proxyUrl').value || proxyUrl).replace(/\/$/, '');
+  try {
+    const resp = await fetch(base + '/ping', { method: 'GET' });
+    const data = await resp.json().catch(() => ({}));
+    if (resp.ok) {
+      setProxyStatus('✓ Proxy is reachable and running', 'ok');
+      if (proxyEnabled) document.getElementById('proxyDot').className = 'proxy-dot on';
+    } else {
+      throw new Error(`HTTP ${resp.status}`);
+    }
+  } catch(e) {
+    setProxyStatus(`✗ Cannot reach proxy — is proxy.py running?  (${e.message})`, 'err');
+    if (proxyEnabled) document.getElementById('proxyDot').className = 'proxy-dot err';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SEND REQUEST  (proxy-aware)
+// ═══════════════════════════════════════════════════════════════════
+async function sendRequest() {
+  const url = buildURL();
+  if (!url) { toast('Please enter a URL','error'); return; }
+  const method = document.getElementById('methodSel').value;
+
+  // ── collect headers ──
+  const hdrMap = {};
+  getKVRows('headersT').filter(r=>r.enabled&&r.key).forEach(r=>{hdrMap[r.key]=r.value;});
+  getAuthHdrs().filter(([k,v])=>k&&v).forEach(([k,v])=>{hdrMap[k]=v;});
+
+  // ── collect body ──────────────────────────────────────────
+  // For proxy mode, multipart files are read as ArrayBuffers and sent as byte arrays.
+  // For direct mode, the browser constructs FormData natively.
+
+  let directBody  = null;   // used when proxy is OFF
+  let proxyBody   = null;   // stringified envelope body field, used when proxy is ON
+  let proxyBType  = bodyType;
+
+  if (bodyType === 'json') {
+    hdrMap['Content-Type'] = 'application/json';
+    const raw = document.getElementById('jsonBody').value.trim();
+    directBody = raw || null;
+    proxyBody  = raw || null;
+
+  } else if (bodyType === 'form') {
+    hdrMap['Content-Type'] = 'application/x-www-form-urlencoded';
+    const p = new URLSearchParams();
+    getKVRows('formT').filter(r=>r.enabled&&r.key).forEach(r=>p.append(r.key,r.value));
+    directBody = p.toString() || null;
+    proxyBody  = p.toString() || null;
+
+  } else if (bodyType === 'text') {
+    hdrMap['Content-Type'] = 'text/plain';
+    const raw = document.getElementById('textBody').value.trim();
+    directBody = raw || null;
+    proxyBody  = raw || null;
+
+  } else if (bodyType === 'xml') {
+    hdrMap['Content-Type'] = 'application/xml';
+    const raw = document.getElementById('xmlBody').value.trim();
+    directBody = raw || null;
+    proxyBody  = raw || null;
+
+  } else if (bodyType === 'multipart') {
+    // Direct: plain FormData
+    const fd = new FormData();
+    getMPRows().filter(r=>r.enabled&&r.key).forEach(r=>{
+      if (r.type==='file' && r.file) fd.append(r.key, r.file);
+      else if (r.type==='text') fd.append(r.key, r.value);
+    });
+    directBody = fd;
+
+    // Proxy: need to read files as byte arrays
+    if (proxyEnabled) {
+      const mpParts = {};
+      const fileReads = getMPRows().filter(r=>r.enabled&&r.key).map(async r => {
+        if (r.type === 'file' && r.file) {
+          const ab = await r.file.arrayBuffer();
+          mpParts[r.key] = {
+            type: 'file',
+            bytes: Array.from(new Uint8Array(ab)),
+            filename: r.file.name,
+            mimetype: r.file.type || 'application/octet-stream',
+          };
+        } else {
+          mpParts[r.key] = { type: 'text', value: r.value };
+        }
+      });
+      await Promise.all(fileReads);
+      proxyBody = mpParts;
+    }
+
+  } else if (bodyType === 'raw') {
+    const f = document.getElementById('rawFile').files[0];
+    if (f) {
+      hdrMap['Content-Type'] = f.type || 'application/octet-stream';
+      directBody = f;
+      if (proxyEnabled) {
+        const ab = await f.arrayBuffer();
+        proxyBody = { bytes: Array.from(new Uint8Array(ab)), mimetype: f.type || 'application/octet-stream' };
+      }
+    }
+  }
+
+  setLoading(true);
+  const t0 = performance.now();
+
+  try {
+    let respStatus, respStatusText, respText, respHdrs = [], respCT = '';
+
+    if (proxyEnabled) {
+      // ── PROXY PATH ──────────────────────────────────────────
+      const base    = (document.getElementById('proxyUrl').value || proxyUrl).replace(/\/$/, '');
+      const envelope = {
+        url:      url,
+        method:   method,
+        headers:  hdrMap,
+        bodyType: bodyType === 'none' ? 'none' : proxyBType,
+        body:     proxyBody,
+      };
+
+      const resp = await fetch(base, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(envelope),
+      });
+
+      respStatus     = resp.status;
+      respStatusText = resp.statusText || String(resp.status);
+      respText       = await resp.text();
+      resp.headers.forEach((v,k) => {
+        if (!k.startsWith('access-control-')) respHdrs.push([k,v]);
+      });
+      respCT = resp.headers.get('content-type') || '';
+
+    } else {
+      // ── DIRECT PATH ─────────────────────────────────────────
+      const opts = { method, headers: hdrMap };
+      if (directBody && !['GET','HEAD'].includes(method)) opts.body = directBody;
+      const resp = await fetch(url, opts);
+
+      respStatus     = resp.status;
+      respStatusText = resp.statusText;
+      respText       = await resp.text();
+      resp.headers.forEach((v,k) => respHdrs.push([k,v]));
+      respCT = resp.headers.get('content-type') || '';
+    }
+
+    const elapsed = Math.round(performance.now() - t0);
+    const bytes   = new Blob([respText]).size;
+    const saved   = { status: respStatus, statusText: respStatusText,
+                      body: respText, respHdrs, ms: elapsed, bytes, ct: respCT };
+    const tab = tabs.find(t => t.id === activeId);
+    if (tab) tab.response = saved;
+    setLoading(false);
+    showResponse(saved);
+
+  } catch(e) {
+    setLoading(false);
+    const ms = Math.round(performance.now() - t0);
+    if (proxyEnabled) {
+      renderError({ message: `Could not reach proxy at ${proxyUrl}\n\nMake sure proxy.py is running.\n\n${e.message}` }, ms);
+    } else {
+      renderError(e, ms);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RENDER RESPONSE
+// ═══════════════════════════════════════════════════════════════════
+function showResponse(r) {
+  const badge=document.getElementById('statusBadge');
+  badge.textContent=`${r.status} ${r.statusText}`;
+  badge.className='status-badge '+(r.status>=200&&r.status<300?'ok':r.status>=400?'err':'warn');
+  const tp=document.getElementById('timePill'); tp.textContent=`${r.ms} ms`; tp.style.display='inline';
+  const sp=document.getElementById('sizePill'); sp.textContent=fmtB(r.bytes); sp.style.display='inline';
+
+  const pre=document.getElementById('respPre');
+  if (r.ct.includes('json')||looksJSON(r.body)) {
+    try{pre.innerHTML=synHL(JSON.stringify(JSON.parse(r.body),null,2));}
+    catch{pre.textContent=r.body;}
+  } else { pre.textContent=r.body; }
+
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('loadingState').style.display='none';
+  document.getElementById('respBodyWrap').style.display='block';
+
+  document.getElementById('respRaw').textContent=
+    `HTTP ${r.status} ${r.statusText}\n`+r.respHdrs.map(([k,v])=>`${k}: ${v}`).join('\n')+'\n\n'+r.body;
+
+  const tbody=document.querySelector('#respHdrsTbl tbody');
+  tbody.innerHTML='';
+  r.respHdrs.forEach(([k,v])=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(k)}</td><td>${esc(v)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function clearResponse() {
+  document.getElementById('statusBadge').className='status-badge';
+  document.getElementById('timePill').style.display='none';
+  document.getElementById('sizePill').style.display='none';
+  document.getElementById('emptyState').style.display='flex';
+  document.getElementById('loadingState').style.display='none';
+  document.getElementById('respBodyWrap').style.display='none';
+  document.getElementById('respPre').innerHTML='';
+  document.getElementById('respRaw').textContent='';
+  document.querySelector('#respHdrsTbl tbody').innerHTML='';
+}
+
+function renderError(e,ms) {
+  document.getElementById('statusBadge').textContent='Error';
+  document.getElementById('statusBadge').className='status-badge err';
+  const tp=document.getElementById('timePill'); tp.textContent=`${ms} ms`; tp.style.display='inline';
+  document.getElementById('sizePill').style.display='none';
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('loadingState').style.display='none';
+  document.getElementById('respBodyWrap').style.display='block';
+  document.getElementById('respPre').textContent=
+    `⚠ Request failed\n\n${e.message}\n\nPossible causes:\n• CORS restrictions on the server\n• Network error / unreachable host\n• Invalid URL\n\nThe curl command above works directly from your terminal.`;
+}
+
+function setLoading(on) {
+  document.getElementById('sendBtn').disabled=on;
+  document.getElementById('loadingState').style.display=on?'flex':'none';
+  if (on) {
+    document.getElementById('emptyState').style.display='none';
+    document.getElementById('respBodyWrap').style.display='none';
+    document.getElementById('statusBadge').className='status-badge';
+    document.getElementById('timePill').style.display='none';
+    document.getElementById('sizePill').style.display='none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  JSON BEAUTIFY / MINIFY / VALIDATE
+// ═══════════════════════════════════════════════════════════════════
+function beautifyJSON() {
+  const ta=document.getElementById('jsonBody');
+  try {
+    ta.value=JSON.stringify(JSON.parse(ta.value.trim()),null,2);
+    setJSONStatus('valid','✓ valid'); updateCurl();
+    ta.style.outline='1px solid var(--accent)';
+    setTimeout(()=>ta.style.outline='',600);
+    toast('JSON beautified!');
+  } catch {
+    setJSONStatus('invalid','✗ invalid JSON');
+    toast('Invalid JSON — cannot beautify','error');
+    ta.style.outline='1px solid var(--red)';
+    ta.animate([{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'translateX(0)'}],{duration:250});
+    setTimeout(()=>ta.style.outline='',600);
+  }
+}
+
+function minifyJSON() {
+  const ta=document.getElementById('jsonBody');
+  try { ta.value=JSON.stringify(JSON.parse(ta.value.trim())); setJSONStatus('valid','✓ valid'); updateCurl(); toast('JSON minified!'); }
+  catch { setJSONStatus('invalid','✗ invalid JSON'); toast('Invalid JSON — cannot minify','error'); }
+}
+
+function validateJSON() {
+  const raw=document.getElementById('jsonBody').value.trim();
+  if (!raw){setJSONStatus('','');return;}
+  try{JSON.parse(raw);setJSONStatus('valid','✓ valid');}
+  catch{setJSONStatus('invalid','✗ invalid');}
+}
+
+function setJSONStatus(cls,label) {
+  const el=document.getElementById('jsonStatus');
+  el.className='json-status'+(cls?' '+cls:'');
+  el.textContent=label;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SYNTAX HIGHLIGHT + UTILS
+// ═══════════════════════════════════════════════════════════════════
+function synHL(json) {
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+\.?\d*(?:[eE][+\-]?\d+)?)/g, m=>{
+    let c='json-n';
+    if (/^"/.test(m)) c=/:$/.test(m)?'json-k':'json-s';
+    else if (/true|false/.test(m)) c='json-b';
+    else if (/null/.test(m)) c='json-null';
+    const d = c==='json-k' ? m.slice(0,-1) : m;
+    return `<span class="${c}">${esc(d)}</span>${c==='json-k' ? ':' : ''}`;
+  });
+}
+
+function looksJSON(s){const t=s.trim();return(t[0]==='{' && t.at(-1)==='}') || (t[0]==='[' && t.at(-1)===']');}
+function esc(s=''){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function es(s=''){return String(s).replace(/"/g,'\\"');}
+function fmtB(b){return b<1024?`${b} B`:b<1048576?`${(b/1024).toFixed(1)} KB`:`${(b/1048576).toFixed(2)} MB`;}
+
+function toast(msg,type='ok'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.style.color=type==='error'?'var(--red)':'var(--accent)';
+  el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  EVENT HANDLERS
+// ═══════════════════════════════════════════════════════════════════
+function onMethodChange(){
+  const ms=document.getElementById('methodSel');
+  ms.setAttribute('data-m',ms.value);
+  updateCurl();
+}
+function onRawChange(){
+  const f=document.getElementById('rawFile').files[0];
+  document.getElementById('rawInfo').textContent=f?`${f.name}  ·  ${fmtB(f.size)}  ·  ${f.type||'unknown'}`:'';
+  updateCurl();
+}
+
+// ─── Resizer ───
+(function(){
+  const resizer=document.getElementById('resizer');
+  const left=document.getElementById('leftPane');
+  let drag=false,sx=0,sw=0;
+  resizer.addEventListener('mousedown',e=>{drag=true;sx=e.clientX;sw=left.getBoundingClientRect().width;resizer.classList.add('drag');document.body.style.userSelect='none';document.body.style.cursor='col-resize';});
+  document.addEventListener('mousemove',e=>{if(!drag)return;left.style.width=Math.max(300,Math.min(sw+e.clientX-sx,window.innerWidth-300))+'px';});
+  document.addEventListener('mouseup',()=>{if(!drag)return;drag=false;resizer.classList.remove('drag');document.body.style.userSelect='';document.body.style.cursor='';});
+})();
+
+// ─── Keyboard shortcuts ───
+document.addEventListener('keydown',e=>{
+  if ((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();sendRequest();}
+  if ((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key==='F'){e.preventDefault();if(bodyType==='json')beautifyJSON();}
+  if ((e.ctrlKey||e.metaKey)&&e.key==='t'){e.preventDefault();createTab();}
+  if ((e.ctrlKey||e.metaKey)&&e.key==='w'){e.preventDefault();if(activeId)closeTab({stopPropagation:()=>{}},activeId);}
+});
+
+// ═══════════════════════════════════════════════════════════════════
+//  PERSISTENCE  (localStorage)
+// ═══════════════════════════════════════════════════════════════════
+const LS_KEY = 'curlman_v1';
+let _restoring = false;   // guard: don't persist mid-restore
+
+function persistState() {
+  if (_restoring) return;   // never write while DOM is mid-swap
+  saveActive();
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ tabs, activeId, tabCounter }));
+  } catch(e) { /* storage full / private mode — silently skip */ }
+}
+
+function loadPersistedState() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return false;
+    const p = JSON.parse(raw);
+    if (!p.tabs || !p.tabs.length) return false;
+    tabs       = p.tabs;
+    activeId   = null;
+    tabCounter = p.tabCounter || p.tabs.length;
+    // rebuild strip elements for every saved tab
+    p.tabs.forEach(t => rebuildTabEl(t));
+    // restore to previously-active tab (fallback to first)
+    const target = p.tabs.find(t => t.id === p.activeId) || p.tabs[0];
+    switchToTab(target.id);
+    return true;
+  } catch(e) { return false; }
+}
+
+// Creates the strip DOM element for a tab — shared by createTab & loadPersistedState
+function rebuildTabEl(t) {
+  const el = document.createElement('div');
+  el.className = 'rtab';
+  el.dataset.id = t.id;
+  el.innerHTML = `
+    <span class="rtab-method" id="rm-${t.id}" style="color:${MC[t.method]||MC.GET}">${t.method||'GET'}</span>
+    <span class="rtab-name"   id="rn-${t.id}">${esc(t.name)}</span>
+    <button class="rtab-close" onclick="closeTab(event,${t.id})">✕</button>`;
+  el.addEventListener('click', e => { if (!e.target.classList.contains('rtab-close')) switchToTab(t.id); });
+
+  const nm = el.querySelector('.rtab-name');
+  nm.addEventListener('dblclick', () => {
+    nm.contentEditable = 'true'; nm.focus();
+    const r = document.createRange(); r.selectNodeContents(nm);
+    window.getSelection().removeAllRanges(); window.getSelection().addRange(r);
+  });
+  nm.addEventListener('blur', () => {
+    nm.contentEditable = 'false';
+    t.name = nm.textContent.trim() || t.name;
+    nm.textContent = t.name;
+    persistState();       // explicit save after rename
+  });
+  nm.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nm.blur(); } });
+
+  document.getElementById('rtabStrip').appendChild(el);
+  return el;
+}
+
+// Piggy-back persist onto updateCurl (called by every meaningful change)
+const _origUpdateCurl = updateCurl;
+updateCurl = function() { _origUpdateCurl(); persistState(); };
+
+// Persist on tab close too
+const _origCloseTab = closeTab;
+closeTab = function(e, id) { _origCloseTab(e, id); persistState(); };
+
+// Flush on page exit
+window.addEventListener('pagehide',     persistState);
+window.addEventListener('beforeunload', persistState);
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT — restore from localStorage, or start fresh
+// ═══════════════════════════════════════════════════════════════════
+if (!loadPersistedState()) createTab();
+</script>
+</body>
+</html>
