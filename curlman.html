@@ -282,9 +282,6 @@
       <input class="proxy-url-inp" id="proxyUrl" value="http://127.0.0.1:7474"
              oninput="onProxyUrlChange()" spellcheck="false"/>
     </div>
-    <div class="proxy-hint">
-      Start the proxy: &nbsp;<code>python proxy.py</code>&nbsp; then enable the toggle above.
-    </div>
     <div class="proxy-status-msg" id="proxyStatusMsg"></div>
   </div>
 </div>
@@ -1089,7 +1086,7 @@ async function sendRequest() {
     setLoading(false);
     const ms = Math.round(performance.now() - t0);
     if (proxyEnabled) {
-      renderError({ message: `Could not reach proxy at ${proxyUrl}\n\nMake sure proxy.py is running.\n\n${e.message}` }, ms);
+      renderError({ message: `Could not reach proxy at ${proxyUrl}\n\nMake sure proxy server is running.\n\n${e.message}` }, ms);
     } else {
       renderError(e, ms);
     }
