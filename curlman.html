@@ -13,8 +13,8 @@
     --s3:       #222733;
     --border:   #2a2f3d;
     --border2:  #353c50;
-    --accent:   #4fffb0;
-    --blue:     #00cfff;
+    --accent:   #38bdf8;
+    --blue:     #818cf8;
     --red:      #ff6b6b;
     --orange:   #ffb347;
     --purple:   #c084fc;
@@ -161,7 +161,7 @@
   .resp-panel.active{display:flex}
   .resp-scroll{flex:1;overflow:auto}
   .resp-pre{padding:14px;font-size:12.5px;line-height:1.8;color:var(--text);white-space:pre-wrap;word-break:break-all;min-height:100%}
-  .json-k{color:#7dd3fc}.json-s{color:#86efac}.json-n{color:#fbbf24}.json-b{color:#f472b6}.json-null{color:#94a3b8}
+  .json-k{color:#93c5fd}.json-s{color:#67e8f9}.json-n{color:#fbbf24}.json-b{color:#f472b6}.json-null{color:#94a3b8}
   .hdrs-tbl{width:100%;border-collapse:collapse}
   .hdrs-tbl th{background:var(--s2);color:var(--text3);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:8px 14px;text-align:left;border-bottom:1px solid var(--border);position:sticky;top:0}
   .hdrs-tbl td{padding:7px 14px;border-bottom:1px solid var(--border);font-size:12px;word-break:break-all}
@@ -282,9 +282,9 @@
       <input class="proxy-url-inp" id="proxyUrl" value="http://127.0.0.1:7474"
              oninput="onProxyUrlChange()" spellcheck="false"/>
     </div>
-    <!--<div class="proxy-hint">
+    <div class="proxy-hint">
       Start the proxy: &nbsp;<code>python proxy.py</code>&nbsp; then enable the toggle above.
-    </div>-->
+    </div>
     <div class="proxy-status-msg" id="proxyStatusMsg"></div>
   </div>
 </div>
@@ -465,7 +465,7 @@ let tabCounter  = 0;
 let bodyType    = 'none';
 let curlOpen    = true;
 
-const MC = { GET:'var(--accent)', POST:'var(--orange)', PUT:'var(--blue)', DELETE:'var(--red)', PATCH:'var(--purple)', HEAD:'var(--pink)', OPTIONS:'var(--slate)' };
+const MC = { GET:'#38bdf8', POST:'var(--orange)', PUT:'var(--blue)', DELETE:'var(--red)', PATCH:'var(--purple)', HEAD:'var(--pink)', OPTIONS:'var(--slate)' };
 
 // ═══════════════════════════════════════════════════════════════════
 //  DEFAULT TAB STATE
