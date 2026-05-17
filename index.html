@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CURLman — API Tester</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230d0f12'/><text x='3' y='22' font-family='monospace' font-weight='900' font-size='14' fill='%2338bdf8'>C</text><text x='12' y='22' font-family='monospace' font-weight='900' font-size='14' fill='%23818cf8'>M</text><circle cx='26' cy='10' r='4' fill='none' stroke='%2338bdf8' stroke-width='2'/><line x1='29' y1='13' x2='31' y2='15' stroke='%2338bdf8' stroke-width='2' stroke-linecap='round'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -281,6 +282,9 @@
       <span class="proxy-url-label">Proxy URL</span>
       <input class="proxy-url-inp" id="proxyUrl" value="http://127.0.0.1:7474"
              oninput="onProxyUrlChange()" spellcheck="false"/>
+    </div>
+    <div class="proxy-hint">
+      Start the proxy: &nbsp;<code>python proxy.py</code>&nbsp; then enable the toggle above.
     </div>
     <div class="proxy-status-msg" id="proxyStatusMsg"></div>
   </div>
@@ -1086,7 +1090,7 @@ async function sendRequest() {
     setLoading(false);
     const ms = Math.round(performance.now() - t0);
     if (proxyEnabled) {
-      renderError({ message: `Could not reach proxy at ${proxyUrl}\n\nMake sure proxy server is running.\n\n${e.message}` }, ms);
+      renderError({ message: `Could not reach proxy at ${proxyUrl}\n\nMake sure proxy.py is running.\n\n${e.message}` }, ms);
     } else {
       renderError(e, ms);
     }
