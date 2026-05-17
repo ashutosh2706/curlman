@@ -1,0 +1,26 @@
+{
+  "name": "curlman-proxy",
+  "version": "1.0.0",
+  "description": "CURLman Proxy Server",
+  "main": "proxy.js",
+  "bin": "proxy.js",
+  "scripts": {
+    "start": "node proxy.js",
+    "build": "pkg proxy.js --targets node18-win-x64,node18-linux-x64 --output proxy --compress GZip",
+    "build:win": "pkg proxy.js --targets node18-win-x64 --output proxy.exe --compress GZip",
+    "build:linux": "pkg proxy.js --targets node18-linux-x64 --output proxy --compress GZip"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  },
+  "pkg": {
+    "assets": [],
+    "targets": [
+      "node18-win-x64",
+      "node18-linux-x64"
+    ]
+  }
+}
