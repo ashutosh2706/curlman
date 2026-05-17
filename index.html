@@ -941,7 +941,7 @@ async function checkProxy() {
       throw new Error(`HTTP ${resp.status}`);
     }
   } catch(e) {
-    setProxyStatus(`✗ Cannot reach proxy — is proxy.py running?  (${e.message})`, 'err');
+    setProxyStatus(`✗ Cannot reach proxy — is proxy server running?  (${e.message})`, 'err');
     if (proxyEnabled) document.getElementById('proxyDot').className = 'proxy-dot err';
   }
 }
@@ -1090,7 +1090,7 @@ async function sendRequest() {
     setLoading(false);
     const ms = Math.round(performance.now() - t0);
     if (proxyEnabled) {
-      renderError({ message: `Could not reach proxy at ${proxyUrl}\n\nMake sure proxy.py is running.\n\n${e.message}` }, ms);
+      renderError({ message: `Could not reach proxy at ${proxyUrl}\n\nMake sure proxy server is running.\n\n${e.message}` }, ms);
     } else {
       renderError(e, ms);
     }
